@@ -2,7 +2,8 @@
 
 ## Install Rust and Cargo Concordium
 
-Navigatie over to the [Rust]("https://rustup.rs/") home page and install for your system. To check if you have Rust installed already open a terminal the copy the following.
+
+Navigatie over to the [Rust](https://rustup.rs/) home page and install for your system. To check if you have Rust installed already open a terminal the copy the following.
 
     rustup -h
 
@@ -19,7 +20,7 @@ Output should look like the following.
 
 Install Cargo Concordium & check install.
 
-[Download from here.](https://developer.concordium.software/en/mainnet/net/installation/downloads-testnet.html#cargo-concordium-testnet)
+[Download Cargo Concordium](https://developer.concordium.software/en/mainnet/net/installation/downloads-testnet.html#cargo-concordium-testnet)
 
 Open a ternimal, change permissions & file location to cargo bin.
 
@@ -30,7 +31,7 @@ Open a ternimal, change permissions & file location to cargo bin.
 
 ## Install Concordium Client 
 
-Download [ Concordium client]("https://developer.concordium.software/en/mainnet/net/installation/downloads-testnet.html#concordium-node-and-client-download-testnet")
+Download [Concordium client](https://developer.concordium.software/en/mainnet/net/installation/downloads-testnet.html#concordium-node-and-client-download-testnet)
 
 Check Install and testnet node.
 
