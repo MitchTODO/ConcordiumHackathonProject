@@ -45,7 +45,7 @@ Check Install and testnet node by running the following command.
 
 ## Setup testnet wallet and add liquidity
 
-Download web browser extension, create a identity on the testnet and add liquidity.
+Download [web browser extension](https://chrome.google.com/webstore/detail/concordium-wallet/mnnkpffndmickbiakofclnpoiajlegmg?hl=en-US), create a identity on the testnet and add liquidity. Use the following [link](https://developer.concordium.software/en/mainnet/net/browser-wallet/setup-browser-wallet.html#setup-bw) to help get you started 
 
 <div >
 <img height="500" src="./assets/web1.png">
