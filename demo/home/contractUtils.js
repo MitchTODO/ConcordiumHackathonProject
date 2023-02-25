@@ -146,6 +146,7 @@ function showNotaryWill(toShow) {
             // Set will notary overview status
             // This is presented on-top of will view
             let element = document.getElementById("active_notary");
+	    document.getElementById("esealed").style.display = "block";
             if(currentAccountAddress == null) {
                 element.textContent = "🔴 Connect Wallet to notarize will."
             }else if (willOnSearch.Some[0].notary != currentAccountAddress) {
