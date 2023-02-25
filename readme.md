@@ -103,7 +103,7 @@ Open your terminal and git clone the repo.
 
 ### 2. (**Optional**) Compiling & deploying E-Will Contract
 
-This section is optional as the dapp uses a predeployed E-Wills contract on the Concordium testnet. Please defer to the [quick start video]() for how this process is done.
+This section is optional as the dapp uses a predeployed E-Wills contract on the Concordium testnet. Please defer to the [quick start video](https://youtu.be/yxFT_i2EiZw) for how this process is done.
 
 ### 3. Start the dapp
 
