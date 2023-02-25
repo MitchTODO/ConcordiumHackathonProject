@@ -20,8 +20,8 @@ E-Wills is the next generation of Will notarization, verification & discovery po
     + [3. Start the dapp](#3-start-the-dapp)
     + [4. Conncting your Concordium Browser Wallet](#4-conncting-your-concordium-browser-wallet)
     + [5. Minting a will as a digital Asset](#5-minting-your-will-as-a-digital-asset)
-    + [6. Will notarization](#6-will-notarization)
-    + [7. Will Burning](#4-minting-a-will-as-a-digital-asset)
+    + [6. Will notarization](#6-e-will-notarization)
+    + [7. Will Burning](#7-e-will-burning)
   * [Licence](#licence)
 
 ---
@@ -73,7 +73,7 @@ This project is part of the Building The Future Of ID hackathon sponsored by Con
 
 ### Creation
 
-The testator starts the process by calling the mint method in the smart contract taking in three arguments; will url, hash of the will & the notary address. Values are saved within the contract state and mapped to the testator address, representing ownership. A testator can only own a single E-Will that prohibits modification and must be burned to create a new instance. In this state, the will is invalid and will need to be notarized.
+The testator starts the process by calling the smart contract `mint` method taking in three arguments; will url, hash of the will & the notary address. Values are saved within the contract state and mapped to the testator address, representing ownership. A testator can only own a single immutable E-Will and must be burned to create a new instance. In this state, the will is invalid and will need to be notarized.
 
 
 ### Notarization & Verification
@@ -129,7 +129,7 @@ You should be present with the following within your brower.
 
 ### 4. Conncting your Concordium Browser Wallet
 
-Within the dapp press the connect wallet button. You will then be prompted by the wallet to connect your address. 
+Within the dapp press the connect wallet button. You will then to confirm the connection of your wallet address. 
 
 Once connected the dapp checks if the address ownes an E-will within the contract. If so, contents of that E-will are then requested and presented. Otherwise the user is presented with the will creation view. 
 
