@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="discription" content="">
+    <meta name="viewport" content="width=device-width,initial-scale =1">
+    <title>E-Wills</title>
+    
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    
+    <script src ="/sdk.js"></script>
+    
+    <script src ="/helpers.js"></script>
+    <script src ="/contractUtils.js"></script>
+
+</head>
+
+<body>
+    <div style="display: flex;">
+        <h3>E-Wills</h3>
+        <div class="center round" style="background-color: #1d7484;">
+            <button id = "0" class = "round large " onclick="toggleView(this.id)"> Testator</button>
+            <button id = "1" class = "round large" onclick="toggleView(this.id)"> Notary</button>
+        </div>
+
+        <div  style="display: flex; "> 
+            <button class = "round small" id="accountAddress" onclick="connect()" > Connect Wallet</button>
+        </div>
+        
+    </div>
+
+    <div id="tx_cont" class="heigh_top center" hidden>
+        <b>Tx History</b>
+        <div id="tx_history"> </div>
+    </div>
+
+    <div id="testator-view" class="container">
+
+        <div id="will-view" hidden>
+            <div class="center">
+                <button class="burn round large center" onclick="burn()">Burn Will 🔥</button>
+            </div> 
+            <div class="will fancy">    
+
+                <h3 class="center fancy">Living Will & Testament</h3>
+                <br>
+                <p id = "testator-will" class="indent" hidden></p>
+                <div id = "temp-will">
+                    <p class="indent">██████████████████████████████</p>
+                    <p>████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >███████████████████████████</p>
+                </div>
+
+                <div class=" type">
+                    <div class="will " >
+                        <b><u>Notarization</u></b>
+                        <div >
+                            <i>Status:</i>
+                            <p id="notary_status"></p>
+                        </div>
+                        
+ 
+                        <div>
+                            <b>Acting Notary</b>
+                            <p class="sf" id="notary_address"></p>
+                            
+                        </div>
+   
+                    </div>
+                    <div class="will" >
+                        <b><u>E-Seal Verification</u></b>
+                        <div>
+                            <i>Status:</i>
+                            <p id="eseal_status"> </p>
+                        </div>
+                        <div>
+                            <b>Will Hash</b>
+                            <div class="sf">
+                                <p class="smallt">Mint:</p>
+                                <p class="smallt" id="mint_hash"></p>
+                            </div>
+                            <div class="sf smallt">
+                                <p class="smallt">Current:</p>
+                                <p id = "testator-current-hash"class="current_hash"></p>
+                            </div>
+                           
+                            
+                        </div>
+                        <div>
+                            <b>Witness</b>
+                            <p class="sf" id="witness_address"></p>
+                        </div>
+                        <div>
+                            <b>TimeStamp</b>
+                            <p class="sf" id="time_stamp"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="center sf">
+                    <b>Will File Url:</b>
+                    <p id="will_url"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="create-will" class="center" hidden>
+            <h4 class="margin ">Will Creation</h4>
+            <div>
+                <b class="margin">Will File Url:</b>
+                <input id="fileSelector" class="input" type="url" value="https://raw.githubusercontent.com/MitchTODO/E-Wills/main/will_demo.txt">
+                
+            </div>
+            <div>
+                <b class="margin ">Will Hash:</b>
+                <button class="round" onclick="getWillFile(document.getElementById('fileSelector').value)">Get</button>
+                <p id = "willHash"class="margin"></p>
+            </div>
+            <div>
+                <b class="margin">Notary Address:</b>
+                <input id = "notary" class="input" type="text">
+            </div>
+
+            <div>
+                <button class = "small round" onclick="mint()">Mint</button>
+            </div>
+        </div>
+
+
+        <div id="progress-view" class="center" hidden>
+            <div class="loader center">
+            </div>
+            <p>Loading Your Will</p>
+        </div>
+
+        <div id = "default-view">
+            <h4 class="center "> Connect your wallet to create and manager your Will.</h4>
+        </div>
+    </div>
+
+    <div id="notary-view" hidden>
+        <div class="container">
+            <div class="small flex">
+                <p class="left">Find Will</p>
+                <input id = "lookup" class="input" style="margin:0px" type="text" placeholder="Search by address"/>
+                <button class="round left" onclick="getWill()">Search</button>
+            </div>
+            <b id="lookup_error" hidden>No Will found for input Address.</b>
+        </div>
+        <div id="notary_signing" class="container" hidden>
+            <p id="active_notary" class="sf center"></p>
+            <div class="will fancy">  
+                <h3 class="center fancy">Living Will & Testament </h3>
+                <br>
+                <p id = "notary-will" class="indent" hidden></p>
+                <div id = "temp-n-will">
+                    <p class="indent">██████████████████████████████</p>
+                    <p>████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >████████████████████████████████</p>
+                    <p >███████████████████████████</p>
+                </div>
+                <div class=" type">
+                    <div >
+                        <div class="will" >
+                            <div >
+                                <b>Notarized</b>
+                                <i>Status:</i>
+                                <p id="notary_status_2"> </p>
+                   
+                            </div>
+                            <div>
+                                <b>Acting Notary</b>
+                                <p class="sf" id="notary_address_2"></p>
+                            </div>
+                        </div>
+                        <div class="will" >
+                            <div>
+                                <b>E-Sealed</b>
+                                <i>Status:</i>
+                                <p id="eseal_status_2"> </p>
+                            </div>
+                            <div>
+                                <b>Will Hash</b>
+                                <p class="sf" id="will_hash_2"></p>
+                            </div>
+                            <div>
+                                <b>Current Will Hash</b>
+                                <p class="sf" id="current_will_hash_2"></p>
+                                
+                            </div>
+                            <div>
+                                <b>Witness</b>
+                                <p class="sf" id="witness_address_2"></p>
+                            </div>
+                            <div>
+                                <b>TimeStamp</b>
+                                <p class="sf" id="time_stamp_2"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="esealed" class="will ">
+                <h4 >Eseal Will</h4>
+                <div class=" center">
+                    <b> Witness:</b>
+                    <input id="witness_input" class="input" style="margin:0px" type="text"/>
+                    <button class="round" onclick="notarize()">Eseal & Notarize</button>
+                </div>
+                
+            </div>
+           
+
+    </div>
+</div>
+
+
+</body>
+
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "e-wills",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "live-server home/index.html --mount=/sdk.js:./node_modules/@concordium/web-sdk/lib/concordium.min.js --mount=/helpers.js:./node_modules/@concordium/browser-wallet-api-helpers/lib/concordiumHelpers.min.js --mount=/style.css:./home/style.css --mount=/contractUtils.js:./home/contractUtils.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@concordium/browser-wallet-api-helpers": "^2.0.0",
+    "@concordium/web-sdk": "^3.1.0",
+    "buffer": "^6.0.3",
+    "ipfs-http-client": "^60.0.0",
+    "live-server": "^1.2.2"
+  }
+}
