@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css?family=Josefin+Sans');
+
+html {
+  background-color: #212529
+}
+body {
+  font-family: 'Agdasima', ;
+}
+
+.App {
+  text-align: center;
+}
+
+.indent {
+  text-indent: 30px;
+}
+
+.light-text {
+  color:azure;
+}
+
+.prev-background {
+  color:aliceblue;
+}
+
+.prev-will {
+  height: 100px;
+  width: 100px;
+}
+
+.p-height {
+  height: 100px;
+}
+
+.overflow {
+  white-space: pre-wrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+}
+
+.bottom-button {
+  position: fixed;
+  bottom: 10px;
+}
+
+.fix-will {
+  width: 300px !important;
+}
+
+.small-font {
+  font-size: 10px;
+}
+
+.testimonial-group > .row {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.testimonial-group > .row > .col-xs-4 {
+  display: inline-block;
+  float: none;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
