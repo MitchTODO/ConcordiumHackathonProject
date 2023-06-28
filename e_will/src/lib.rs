@@ -1,18 +1,29 @@
 //! # A Concordium V1 smart contract
+//#![cfg_attr(not(feature = "std"), no_std)]
 use concordium_std::*;
 use core::fmt::Debug;
+
+//const TOKEN_METADATA_BASE_URL: &str = "IPFS"; Think about how base url can be implemented
+//  concordium-client --grpc-ip node.testnet.concordium.com --grpc-port 20000  module deploy a.wasm.v1 --name ewillv2 --sender account1
+// Module successfully deployed with reference: '1ec09182ce7b7a0c8cd0ac46904174162930bb380b2a231fe1e7447a8fc444d0'.
+// Module reference 1ec09182ce7b7a0c8cd0ac46904174162930bb380b2a231fe1e7447a8fc444d0 was successfully named 'ewillv2'.
+
+// c872cae61c6cad07cf03b734363d5ea30618e4820fd625ea668bae1d2296dafb
+// Contract successfully initialized with address: {"index":5142,"subindex":0}
 
 // params for view methods
 #[derive(Serialize, SchemaType, Clone)]
 pub struct WillIdParams {
-    will_id: AccountAddress,
+    will_id: u8,
+    owner: AccountAddress,
 }
 
 // params for notarization
 #[derive(Serialize, SchemaType, Clone)]
 pub struct NotaryParams {
     will_hash:HashSha2256,
-    will_id: AccountAddress,
+    will_id: u8,
+    testator: AccountAddress,
     witness: AccountAddress,
 }
 
@@ -54,11 +65,34 @@ impl FileState {
     }
 }
 
+// Will state.
+#[derive(Serial, DeserialWithState, Deletable, StateClone)]
+#[concordium(state_parameter = "S")]
+struct WillState<S> {
+    active_will: Option<Will>,      // active will is the lastest will to be notarized
+    will_count: u8,                // amount of will user has created
+    wills: StateMap<u8,Will,S>,    // mapping of wills to u8 NOTE could us will hash 
+    operators: StateSet<Address,S>, // operators allowed to modifiy wills?
+}
+
+impl<S:HasStateApi> WillState<S> {
+
+    fn empty(state_builder: &mut StateBuilder<S>) -> Self {
+        WillState {
+            active_will:    None,                       // No active wills
+            will_count:     0,                          // init with zero wills
+            wills:          state_builder.new_map(),    // past wills used
+            operators:      state_builder.new_set(),
+        }
+    }
+}
+
 // contract state.
 #[derive(Serial, DeserialWithState, StateClone)]
 #[concordium(state_parameter = "S")]
 struct State<S> {
-    wills: StateMap<AccountAddress,Will,S>,
+    // Map address to mutple wills
+    state: StateMap<AccountAddress,WillState<S>,S>,
 }
 
 
@@ -79,8 +113,9 @@ enum ContractError {
     // Minting errors
     NotaryCantBeTestator,
     // Will errors
-    WillAlreadyOwnedError,
-    NoWillToBurn,
+    //WillAlreadyOwnedError,
+    //NoWillToBurn,
+    IncorrectHash,
     NoWill,
 
     // Notary errors
@@ -101,31 +136,119 @@ impl From<LogError> for ContractError {
 /********************** State Functions  **********************/
 
 impl<S: HasStateApi> State<S> {
+
     // create a new state with no files registered.
     fn new(state_builder: &mut StateBuilder<S>) -> Self {
         State {
-            wills: state_builder.new_map(),
+            state: state_builder.new_map(),
         }
     }
+
+    // add 
+    fn add(
+        &mut self,
+        owner: &AccountAddress,
+        will: Will, 
+        state_builder: &mut StateBuilder<S>) -> Result<u8, ContractError>
+        {
+            let mut owner_state = self.state.entry(*owner).or_insert_with(|| WillState::empty(state_builder));
+            let wc = owner_state.will_count;
+
+            owner_state.wills
+            .entry(wc)
+            .or_insert(will);
+
+            owner_state.will_count += 1;
+            Ok(owner_state.will_count)
+        }
     
-    // Check if a file exists.
-    fn will_exists(&self, will_id: &AccountAddress) -> bool {
-        let will = self.wills.get(will_id);
-        will.is_some()
+
+    // updates owner active will via notary
+    fn update_active_will(
+        &mut self,
+        owner:&AccountAddress,
+        index:&u8,
+        will:Will,
+        ) 
+        {
+            self.state.entry(*owner).and_modify(|will_state| {
+                will_state.active_will = Some(will.clone());
+                will_state.wills.entry(*index).and_modify(|old_will| {
+                    *old_will = will.clone();
+                });
+
+            });
+        }
+
+    /* TODO allow for notary change
+    Only allow on wills that have not been notarized or is not active
+    fn change_notary(
+        &mut self,
+        owner:&AccountAddress,
+        index:&u8,
+        notary:&AccountAddress,
+    ) -> bool {
+        self.state.entry(*owner).and_modify(|will_state| {
+            will_state.wills.entry(*index).and_modify(|old_will| {
+                *old_will = will.clone();
+            });
+
+        });
+    }
+    */
+
+    // will exist 
+    fn will_exists(
+        &self,
+        owner:&AccountAddress,
+        index:&u8
+    ) -> bool {
+        self.state
+        .get(owner)
+        .map(|will_state| will_state.wills.get(index).is_some())
+        .unwrap_or(false)
     }
 
-    // Get Will recorded from wills by will_id
-    fn get_will(&self, will_id: AccountAddress) -> Option<Will> {
-        self.wills.get(&will_id).map(|v| v.clone())
-    }
+    // will count of owner
+    fn will_count(
+        &self,
+        owner:&AccountAddress,
+    ) -> u8
+        {
+            self
+            .state
+            .get(owner)
+            .map(|will_state| will_state.will_count.clone())
+            .unwrap_or(0)
+        }
+    
+    // return get will at index of will address of array of owner
+    fn get_will(
+        &self,
+        owner:&AccountAddress,
+        index:&u8,
+    ) -> Result<Option<Will>,()>
+    {
+        let will = self
+        .state
+        .get(&owner)
+        .map(|will_state| will_state.wills.get(&index).map(|v| v.clone()))
+        .unwrap();
 
-    // Add a new file hash (replaces existing file if present).
-    fn update(&mut self,will_id: AccountAddress, will:Will) {
-        
-        self.wills
-            .entry(will_id)
-            .and_modify(|old_will| *old_will = will);
-         
+        Ok(will)
+    }
+    
+    // return active will of address
+    fn get_active_will(
+        &self,
+        owner:&AccountAddress,
+    ) -> Option<Will>
+    {
+        self
+        .state
+        .get(&owner)
+        .map(|will_state| will_state.active_will.clone())
+        .unwrap_or(None)
     }
 }
 
@@ -136,13 +259,14 @@ impl<S: HasStateApi> State<S> {
 enum Event {
     Notarization(NotarizationEvent),
     Mint(MintEvent),
-    Burn(BurnEvent),
 }
 
 // The NotarizationEvent is logged when a new file hash is registered.
 #[derive(Debug, Serialize, SchemaType)]
 pub struct NotarizationEvent {
-    will_id : Address,
+    will_id:   u8,
+    // Testator (will owner)
+    testator: AccountAddress,
     notary:    AccountAddress,
     // Hash of the file to be registered by the witness (sender_account).
     file_hash: HashSha2256,
@@ -166,11 +290,10 @@ pub struct BurnEvent {
 }
 
 
-
 /********************** Contract Functions  **********************/
 
 // Init creates a new smart contract instance.
-#[init(contract = "ewills146")]
+#[init(contract = "ewills156")]
 fn init<S: HasStateApi>(
     _ctx: &impl HasInitContext,
     state_builder: &mut StateBuilder<S>,
@@ -179,9 +302,10 @@ fn init<S: HasStateApi>(
     Ok(State::new(state_builder))
 }
 
+
 // Mints a will struct owned by senders address
 #[receive(
-    contract = "ewills146",
+    contract = "ewills156",
     name = "mint",
     parameter = "WillParam",
     error = "ContractError",
@@ -192,15 +316,13 @@ fn mint<S: HasStateApi>(
     ctx: &impl HasReceiveContext,
     host: &mut impl HasHost<State<S>, StateApiType = S>,
     logger: &mut impl HasLogger,
-) -> Result<(), ContractError> {
+) -> Result<u8, ContractError> {
+
     // bail if sender is contract address
     let sender_account = match ctx.sender() {
         Address::Contract(_) => bail!(ContractError::OnlyAccount.into()),
         Address::Account(account_address) => account_address,
     };
-
-    // ensure that sender dosn't already own a `will` 
-    ensure!(!host.state().will_exists(&sender_account) , ContractError::WillAlreadyOwnedError);
 
     // parse method parameters
     let param: WillParam = ctx.parameter_cursor().get()?;
@@ -217,59 +339,24 @@ fn mint<S: HasStateApi>(
         e_seal:FileState::new(),
     };
 
+    let (state, builder) = host.state_and_builder();
+    
+    // add `will` struct into sender address key within contract state `wills` array
+    let will_count = state.add(&sender_account,will,builder)?;
+
     // log new mint event
     logger.log(&Event::Mint(MintEvent {
         will_id:Address::Account(sender_account),
         notary:param.notary,
     }))?;
 
-    // insert `will` struct into sender address key within contract state `wills` StateMap
-    host.state_mut()
-        .wills
-        .entry(sender_account) 
-        .or_insert(will);
-
-    Ok(())
+    Ok(will_count)
 }
 
-// Burns `will` owned by sender address
-#[receive(
-    contract = "ewills146",
-    name = "burn",
-    error = "ContractError",
-    mutable,
-    enable_logger
-)]
-fn burn<S: HasStateApi>(
-    ctx: &impl HasReceiveContext,
-    host: &mut impl HasHost<State<S>, StateApiType = S>,
-    logger: &mut impl HasLogger,
-) -> Result<(), ContractError> {
-    // bail if sender is contract address
-    let sender_account = match ctx.sender() {
-        Address::Contract(_) => bail!(ContractError::OnlyAccount.into()),
-        Address::Account(account_address) => account_address,
-    };
-
-    // ensure that address owns a `will`
-    ensure!(host.state().will_exists(&sender_account), ContractError::NoWillToBurn);
-
-    // delet `will` struct from senders key 
-    host.state_mut()
-        .wills
-        .remove(&sender_account);
-        
-    // log burn event
-    logger.log(&Event::Burn(BurnEvent {
-        will_id:sender_account,
-    }))?;
-
-    Ok(())
-}
 
 // Allows a will to be notarized 
 #[receive(
-    contract = "ewills146",
+    contract = "ewills156",
     name = "notarize",
     parameter = "NotaryParams",
     error = "ContractError",
@@ -283,19 +370,23 @@ fn notarize<S: HasStateApi>(
 ) -> Result<(), ContractError> {
 
     // parse notary parameters
-    let param: NotaryParams = ctx.parameter_cursor().get()?;
+    let params: NotaryParams = ctx.parameter_cursor().get()?;
+
+    ensure!(host.state().will_exists(&params.testator,&params.will_id),ContractError::NoWill);
 
     // get `will` struct if exist
-    let will = match host.state_mut().wills.get(&param.will_id) {
+    let will = match host.state().get_will(&params.testator,&params.will_id).unwrap(){
         Some(will_object) => will_object,
-        None => return Err(ContractError::NoWill),
+        None => return Err(ContractError::NoWill.into()),
     };
 
     // clone `will` struct
     let mut c_will = will.clone();
 
     // get minted file hash 
-    let file_hash:HashSha2256 =  will.will_hash;
+    let file_hash:HashSha2256 = will.will_hash;
+    // ensure notry will file hashes 
+    ensure_eq!(params.will_hash,file_hash,ContractError::IncorrectHash);
 
     // match sender to address account / only accounts can notarize a will.
     let sender_account = match ctx.sender() {
@@ -314,18 +405,20 @@ fn notarize<S: HasStateApi>(
     
     // set `is_notarized` to true
     c_will.is_notarized = true;
+
     // set timestamp and witness parameter
     c_will.e_seal =  FileState {
         timestamp : Some(timestamp),
-        witness : Some(param.witness),
+        witness : Some(params.witness),
     };
     
     // update `will` struct 
-    host.state_mut().update(param.will_id,c_will);
+    host.state_mut().update_active_will(&params.testator, &params.will_id, c_will);
 
     // log notarization event
     logger.log(&Event::Notarization(NotarizationEvent {
-        will_id:Address::Account(param.will_id),
+        will_id:params.will_id,
+        testator:params.testator,
         notary:sender_account,
         file_hash:file_hash,
         witness: sender_account,
@@ -335,12 +428,68 @@ fn notarize<S: HasStateApi>(
     Ok(())
 }
 
-/********************** Contract Views  **********************/
+
+/********************** Contract Views **********************/
 
 #[receive(
-    contract = "ewills146",
-    name = "willExists",
-    parameter = "AccountAddress",
+    contract = "ewills156",
+    name = "active_will",
+    parameter = "WillIdParams",
+    return_value = "Option<Will>"
+)]
+fn active_will<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ReceiveResult<Option<Will>> {
+
+    // get input parameters
+    let param: WillIdParams = ctx.parameter_cursor().get()?;
+
+    // output param
+    let active_result = host.state().get_active_will(&param.owner);
+    Ok(active_result)
+}
+
+
+#[receive(
+    contract = "ewills156",
+    name = "get_will",
+    parameter = "WillIdParams",
+    return_value = "Option<Will>"
+)]
+fn get_will<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ReceiveResult<Option<Will>> {
+
+    // get input parameters
+    let param: WillIdParams = ctx.parameter_cursor().get()?;
+
+    // output param
+    let active_result = host.state().get_will(&param.owner,&param.will_id).unwrap();
+    Ok(active_result)
+}
+
+
+#[receive(
+    contract = "ewills156",
+    name = "will_count",
+    parameter = "WillIdParams",
+    return_value = "u8"
+)]
+fn will_count<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ReceiveResult<u8> {
+    let param: WillIdParams = ctx.parameter_cursor().get()?;
+    Ok(host.state().will_count(&param.owner)) 
+}
+
+
+#[receive(
+    contract = "ewills156",
+    name = "will_exists",
+    parameter = "WillIdParams",
     return_value = "bool"
 )]
 fn will_exists<S: HasStateApi>(
@@ -349,72 +498,17 @@ fn will_exists<S: HasStateApi>(
 ) -> ReceiveResult<bool> {
 
     // get input parameters
-    let param: AccountAddress = ctx.parameter_cursor().get()?;
+    let param: WillIdParams = ctx.parameter_cursor().get()?;
 
     // output bool true/false if `will` exist
-    Ok(host.state().will_exists(&param))
-}
-
-#[receive(
-    contract = "ewills146",
-    name = "willExistsFromSender",
-    return_value = "bool"
-)]
-fn will_exist_sender<S: HasStateApi>(
-    ctx: &impl HasReceiveContext,
-    host: &impl HasHost<State<S>, StateApiType = S>,
-) -> ReceiveResult<bool> {
-    // match sender to address account (bail on Contract addresses)
-    let sender_account = match ctx.sender() {
-        Address::Contract(_) => bail!(ContractError::OnlyAccount.into()),
-        Address::Account(account_address) => account_address,
-    };
-
-    // use `sender_account` as key
-    // output bool true/false if `will_exist` from state
-    Ok(host.state().will_exists(&sender_account))
+    Ok(host.state().will_exists(&param.owner,&param.will_id))
 }
 
 
 #[receive(
-    contract = "ewills146",
-    name = "getWill",
-    parameter = "AccountAddress",
-    return_value = "Option<Will>"
-)]
-fn get_will<S: HasStateApi>(
-    ctx: &impl HasReceiveContext,
-    host: &impl HasHost<State<S>, StateApiType = S>,
-) -> ReceiveResult<Option<Will>> {
-    // get AccountAddress input parameter
-    let param: AccountAddress = ctx.parameter_cursor().get()?;
-   
-    // return optional `will`  mapped to input Account Address
-    Ok(host.state().get_will(param))
-}
-
-#[receive(
-    contract = "ewills146",
-    name = "getWillFromSender",
-    return_value = "Option<Will>"
-)]
-fn get_will_sender<S: HasStateApi>(
-    ctx: &impl HasReceiveContext,
-    host: &impl HasHost<State<S>, StateApiType = S>,
-) -> ReceiveResult<Option<Will>> {
-    // match sender to address account (bail on Contract addresses)
-    let sender_account = match ctx.sender() {
-        Address::Contract(_) => bail!(ContractError::OnlyAccount.into()),
-        Address::Account(account_address) => account_address,
-    };
-    // return optional `will` mapped to sender
-    Ok(host.state().get_will(sender_account))
-}
-
-#[receive(
-    contract = "ewills146",
-    name = "isNotarized",
-    parameter = "AccountAddress",
+    contract = "ewills156",
+    name = "is_notarized",
+    parameter = "WillIdParams",
     return_value = "bool",
     error = "ContractError",
 )]
@@ -422,18 +516,32 @@ fn is_notarized<S: HasStateApi>(
     ctx: &impl HasReceiveContext,
     host: &impl HasHost<State<S>, StateApiType = S>,
 ) -> ReceiveResult<bool> {
+
     // get AccountAddress input parameter
-    let param: AccountAddress = ctx.parameter_cursor().get()?;
+    let params: WillIdParams = ctx.parameter_cursor().get()?;
+
     // match input parameter to `will` within 
-    let will = match host.state().wills.get(&param) {
+    ensure!(host.state().will_exists(&params.owner,&params.will_id),ContractError::NoWill.into());
+    let will = match host.state().get_will(&params.owner,&params.will_id).unwrap(){
         Some(will_object) => will_object,
         None => return Err(ContractError::NoWill.into()),
     };
+
     // return bool true/false if will has be notarized
     Ok(will.is_notarized)
 }
 
-
+#[receive(
+    contract = "ewills156",
+    name = "is_contract",
+    return_value = "bool",
+)]
+fn is_contract<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ReceiveResult<bool> {
+    Ok(true)
+}
 
 
 /********************** Contract Testing  **********************/
@@ -446,8 +554,8 @@ mod tests {
     const TESTATOR: AccountAddress = AccountAddress([0u8; 32]);
     const NOTARY: AccountAddress = AccountAddress([2u8; 32]);
     const WITNESS: AccountAddress = AccountAddress([4u8; 32]);
-    const WILL_HASH :HashSha2256 = HashSha2256([5u8; 32]);
-
+    const WILL_1_HASH :HashSha2256 = HashSha2256([5u8; 32]);
+    const WILL_2_HASH :HashSha2256 = HashSha2256([6u8; 32]);
 
     #[concordium_test]
     // Test that initializing the contract succeeds with some state.
@@ -460,6 +568,7 @@ mod tests {
         state_result.expect_report("Contract initialization results in error");
     }
 
+
     #[concordium_test]
     // Test minting of will.
     fn testing_mint() {
@@ -470,12 +579,15 @@ mod tests {
         // construct input parameters
         let will_url:String = "file_url".to_string();
         let mut logger = TestLogger::init();
+
         let param_object = WillParam {
             will_file: will_url.clone(),
-            will_hash: WILL_HASH,
+            will_hash: WILL_1_HASH,
             notary: NOTARY,
         };
+
         let params = to_bytes(&param_object);
+
         // set raw parameters to test case
         ctx.set_parameter(&params);
 
@@ -489,61 +601,138 @@ mod tests {
         claim!(result.is_ok(),"Mint failed.");
 
         // get & check will struct from contract
-        let params = to_bytes(&TESTATOR); 
+        let get_will_params_object = WillIdParams {
+            will_id: 0,
+            owner: TESTATOR,
+        };
+
+        let params = to_bytes(&get_will_params_object); 
         ctx.set_parameter(&params);
+
+        let will_count = will_count(&ctx,&mut host);
+        
+        // check will count 
+        claim_eq!(will_count.unwrap(),1);
+
+        // set params 
+        //let get_will_params = to_bytes(&get_will_params_object);
+        //ctx.set_parameter(&get_will_params);
+
+        // Get Will object
         let get_will = get_will(&ctx,&mut host);
-        claim!(get_will.is_ok(),"Could not get will");
+         claim!(get_will.is_ok(),"Could not get will");
         let will = get_will.unwrap();
         claim!(will.is_some(), "will contain no components");
 
         // check set variables within will struct 
         claim_eq!(will.clone().unwrap().will_file, will_url, "Will url should match");
-        claim_eq!(will.clone().unwrap().will_hash,WILL_HASH, "Will hash should match");
-        claim_eq!(will.clone().unwrap().notary,NOTARY, "Will notary should match");
-        claim_eq!(will.clone().unwrap().is_notarized,false, "Will should not be notarized");
+        claim_eq!(will.clone().unwrap().will_hash, WILL_1_HASH, "Will hash should match");
+        claim_eq!(will.clone().unwrap().notary, NOTARY, "Will notary should match");
+        claim_eq!(will.clone().unwrap().is_notarized, false, "Will should not be notarized");
 
+        // get active will params 
+        //let active_will_params = to_bytes(&TESTATOR);
+        //ctx.set_parameter(&active_will_params);
+
+        // check active will for testator should be none
+        let active_will = active_will(&ctx,&mut host).unwrap();
+        claim!(active_will.is_none(), "Active Will should be empty");
     }
-
-
+    
+    
     #[concordium_test]
     // Test burning of a will.
-    fn testing_burning() {
+    fn testing_multiple_will_mint() {
         // set up test case
         let mut ctx = TestReceiveContext::empty();
         ctx.set_sender(Address::Account(TESTATOR));
+
+        let mut state_builder = TestStateBuilder::new();
+        let state = State::new(&mut state_builder);
+
+        let mut host = TestHost::new(state,state_builder);
   
-        // Mint a will
+        // Mint a first will
+        let will_url_1:String = "will 1".to_string();
         let param_object = WillParam {
-            will_file: "file_url".to_string(),
-            will_hash: WILL_HASH,
+            will_file: will_url_1.clone(),
+            will_hash: WILL_1_HASH,
             notary: NOTARY,
         };
+
         let mut logger = TestLogger::init();
         let params = to_bytes(&param_object);
         ctx.set_parameter(&params);
 
-        let mut state_builder = TestStateBuilder::new();
-        let state = State::new(&mut state_builder);
-        let mut host = TestHost::new(state,state_builder);
-
-        // mint new will struct
         let _ = mint(&ctx,&mut host,&mut logger);
 
-        let params = to_bytes(&TESTATOR);
-        ctx.set_parameter(&params);
+        // Mint a second will
+        let will_url_2:String = "will 2".to_string();
+        let param_object_will_2 = WillParam {
+            will_file: will_url_2.clone(),
+            will_hash: WILL_2_HASH,
+            notary: NOTARY,
+        };
 
-        // Check if will exist after minting
-        let does_exist = will_exists(&ctx,&mut host);
-        claim_eq!(does_exist,Ok(true),"Will should exist before burning");
+        let mut logger = TestLogger::init();
+        let params_2 = to_bytes(&param_object_will_2);
+        ctx.set_parameter(&params_2);
 
-        // burn will 
-        let result = burn(&ctx,&mut host,&mut logger);
-        claim!(result.is_ok(),"Burning failed.");
+        let _ = mint(&ctx,&mut host,&mut logger);
 
-        // Check will existance after burning
-        let doesnt_exist = will_exists(&ctx,&mut host);
-        claim_eq!(doesnt_exist,Ok(false),"Will should not exist after burning");
+        let count_params = to_bytes(&TESTATOR);
+        ctx.set_parameter(&count_params);
 
+        // Check will 1
+        // get will parameters
+        let get_will_params_object = WillIdParams {
+            will_id: 0,
+            owner: TESTATOR,
+        };
+        
+        // set params 
+        let get_will_params = to_bytes(&get_will_params_object);
+        ctx.set_parameter(&get_will_params);
+
+        // Check will amount 
+        let will_count = will_count(&ctx,&mut host);
+        claim_eq!(will_count.unwrap(),2,"Incorrect Will count");
+
+        // get will one 
+        let get_will_one = get_will(&ctx,&mut host);
+        // check if none
+        claim!(get_will_one.is_ok(),"Could not get will");
+        let will_one = get_will_one.unwrap();
+        claim!(will_one.is_some(), "will contain no components");
+
+        // check set variables within will struct 
+        claim_eq!(will_one.clone().unwrap().will_file, will_url_1, "Will url should match");
+        claim_eq!(will_one.clone().unwrap().will_hash, WILL_1_HASH, "Will hash should match");
+        claim_eq!(will_one.clone().unwrap().notary, NOTARY, "Will notary should match");
+        claim_eq!(will_one.clone().unwrap().is_notarized, false, "Will should not be notarized");
+        
+        // Check will 2
+        // get will parameters
+        let get_will_params_object_2 = WillIdParams {
+            will_id: 1,
+            owner: TESTATOR,
+        };
+
+        let get_will_params_2 = to_bytes(&get_will_params_object_2);
+        ctx.set_parameter(&get_will_params_2);
+       
+        let get_will_two = get_will(&ctx,&mut host);
+        
+        claim!(get_will_two.is_ok(),"Could not get will");
+        let will_two = get_will_two.unwrap();
+        claim!(will_two.is_some(), "will contain no components");
+
+        // check set variables within will struct 
+        claim_eq!(will_two.clone().unwrap().will_file, will_url_2, "Will 2 url should match");
+        claim_eq!(will_two.clone().unwrap().will_hash, WILL_2_HASH, "Will 2 hash should match");
+        claim_eq!(will_two.clone().unwrap().notary, NOTARY, "Will 2 notary should match");
+        claim_eq!(will_two.clone().unwrap().is_notarized, false, "Will 2 should not be notarized");
+        
     }
 
     #[concordium_test]
@@ -552,13 +741,12 @@ mod tests {
         let mut ctx = TestReceiveContext::empty();
         ctx.set_sender(Address::Account(TESTATOR));
 
-
         // minting parameters
-        let will_url:String = "file_url".to_string();
+        let will_url:String = "will 2".to_string();
 
         let will_params = WillParam {
             will_file: will_url.clone(),
-            will_hash: WILL_HASH,
+            will_hash: WILL_1_HASH,
             notary: NOTARY,
         };
 
@@ -574,40 +762,48 @@ mod tests {
         // mint will
         let _ = mint(&ctx,&mut host,&mut logger);
 
-
         // notary parameters 
         const TIME: u64 = 1;
         ctx.set_metadata_slot_time(Timestamp::from_timestamp_millis(TIME));
 
         let notary_params = NotaryParams {
-            will_hash: WILL_HASH,
-            will_id: TESTATOR,
+            will_hash: WILL_1_HASH,
+            will_id: 0,
+            testator:TESTATOR,
             witness: WITNESS,
         };
+
         // set sender as notary
         ctx.set_sender(Address::Account(NOTARY));
 
         let n_params = to_bytes(&notary_params);
         ctx.set_parameter(&n_params);
 
-        // notarize will 
+        // notarize will
         let result = notarize(&ctx,&mut host,&mut logger);
         claim!(result.is_ok(),"Notarization failed.");
+
         // check results
         ctx.set_sender(Address::Account(TESTATOR));
         
-        let params = to_bytes(&TESTATOR);
+        let get_will_params_object_2 = WillIdParams {
+            will_id: 0,
+            owner: TESTATOR,
+        };
+
+        let params = to_bytes(&get_will_params_object_2);
         ctx.set_parameter(&params);
         // get notarized `will`
         let get_will = get_will(&ctx,&mut host);
         claim!(get_will.is_ok(),"Could not get will");
+
         // Unwrap optinal
         let will = get_will.unwrap();
         claim!(will.is_some(), "will contain no components");
 
         // check `will` struct variables
         claim_eq!(will.clone().unwrap().will_file, will_url, "Will url should match");
-        claim_eq!(will.clone().unwrap().will_hash,WILL_HASH, "Will hash should match");
+        claim_eq!(will.clone().unwrap().will_hash,WILL_1_HASH, "Will hash should match");
         claim_eq!(will.clone().unwrap().notary,NOTARY, "Will notary should match");
         claim_eq!(will.clone().unwrap().is_notarized,true, "Will should be be notarized");
         
@@ -615,5 +811,141 @@ mod tests {
         let e_seal = will.clone().unwrap().e_seal;
         claim_eq!(e_seal.clone().timestamp, Some(Timestamp::from_timestamp_millis(TIME)), "Eseal time is incorrect");
         claim_eq!(e_seal.clone().witness, Some(WITNESS), "Witness address is incorrect");
+
+        // check testators active will 
+        let active_will = active_will(&ctx,&mut host);
+        claim!(active_will.is_ok(),"Could not get active will");
+
+        let a_will = active_will.unwrap();
+        claim!(a_will.is_some(), "Active will is none");
+
+        claim_eq!(a_will.clone().unwrap().will_file, will_url, "Will url should match");
+        claim_eq!(a_will.clone().unwrap().will_hash,WILL_1_HASH, "Will hash should match");
+        claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
+        claim_eq!(a_will.clone().unwrap().is_notarized,true, "Will should be be notarized");
+    }
+
+    #[concordium_test]
+    fn testing_activation_change() {
+        // set up test case
+        let mut ctx = TestReceiveContext::empty();
+        ctx.set_sender(Address::Account(TESTATOR));
+
+        // create state
+        let mut logger = TestLogger::init();
+        let mut state_builder = TestStateBuilder::new();
+        let state = State::new(&mut state_builder);
+        let mut host = TestHost::new(state,state_builder);
+
+        // minting parameters
+        let will_url_one:String = "will 1".to_string();
+        let will_url_two:String = "will 2".to_string();
+
+        let will_params_one = WillParam {
+            will_file: will_url_one.clone(),
+            will_hash: WILL_1_HASH,
+            notary: NOTARY,
+        };
+
+        let will_params_two = WillParam {
+            will_file: will_url_two.clone(),
+            will_hash: WILL_2_HASH,
+            notary: NOTARY,
+        };
+
+        // set parameters and mint first will
+        let w_params_one = to_bytes(&will_params_one);
+        ctx.set_parameter(&w_params_one);
+        let _ = mint(&ctx,&mut host,&mut logger);
+
+
+        // set parameters and mint second will 
+        let w_params_two = to_bytes(&will_params_two);
+        ctx.set_parameter(&w_params_two);
+        let _ = mint(&ctx,&mut host,&mut logger);
+
+    
+        // notary parameters 
+        const TIME: u64 = 1;
+        ctx.set_metadata_slot_time(Timestamp::from_timestamp_millis(TIME));
+
+        // notary parameters for first will
+        let notary_params_one = NotaryParams {
+            will_hash: WILL_1_HASH,
+            will_id: 0,
+            testator:TESTATOR,
+            witness: WITNESS,
+        };
+
+        // notary parameters for second will
+        let notary_params_two = NotaryParams {
+            will_hash: WILL_2_HASH,
+            will_id: 1, // set will id
+            testator:TESTATOR,
+            witness: WITNESS,
+        };
+
+        // set sender as notary
+        ctx.set_sender(Address::Account(NOTARY));
+
+        // set params notarize will
+        let n_params = to_bytes(&notary_params_two);
+        ctx.set_parameter(&n_params);
+        let result = notarize(&ctx,&mut host,&mut logger);
+        claim!(result.is_ok(),"Notarization failed.");
+
+        // check testators active will 
+  
+        //let params = to_bytes(&TESTATOR);
+        let check_active_params_object_1 = WillIdParams {
+            will_id: 0,
+            owner: TESTATOR,
+        };
+        let cap1 = to_bytes(&check_active_params_object_1);
+        ctx.set_parameter(&cap1);
+
+        let active_will_one = active_will(&ctx,&mut host);
+        claim!(active_will_one.is_ok(),"Could not get active will");
+        let a_will = active_will_one.unwrap();
+        claim!(a_will.is_some(), "Active will is none");
+        claim_eq!(a_will.clone().unwrap().will_file, will_url_two, "Will url should match");
+        claim_eq!(a_will.clone().unwrap().will_hash,WILL_2_HASH, "Will hash should match");
+        claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
+        claim_eq!(a_will.clone().unwrap().is_notarized,true, "Will should be be notarized");
+
+        
+        // Notarize second will
+        // set sender as notary
+        ctx.set_sender(Address::Account(NOTARY));
+        let n_params = to_bytes(&notary_params_one);
+        ctx.set_parameter(&n_params);
+
+        // notarize will
+        let result = notarize(&ctx,&mut host,&mut logger);
+        claim!(result.is_ok(),"Notarization failed.");
+
+        // Check results of active will
+        ctx.set_sender(Address::Account(TESTATOR));
+        
+        let check_active_params_object_2 = WillIdParams {
+            will_id: 0,
+            owner: TESTATOR,
+        };
+
+        let cap2 = to_bytes(&check_active_params_object_2);
+        ctx.set_parameter(&cap2);
+        // check testators active will 
+        let active_will = active_will(&ctx,&mut host);
+        claim!(active_will.is_ok(),"Could not get active will");
+
+        let a_will = active_will.unwrap();
+
+        claim!(a_will.is_some(), "Active will is none");
+        
+        claim_eq!(a_will.clone().unwrap().will_file, will_url_one, "Will url should match");
+        claim_eq!(a_will.clone().unwrap().will_hash,WILL_1_HASH, "Will hash should match");
+        claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
+        claim_eq!(a_will.clone().unwrap().is_notarized,true, "Will should be be notarized");
+        
     }
 }

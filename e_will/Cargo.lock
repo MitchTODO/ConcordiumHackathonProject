@@ -54,7 +54,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ewills144"
+name = "ewills"
 version = "0.1.0"
 dependencies = [
  "concordium-std",
