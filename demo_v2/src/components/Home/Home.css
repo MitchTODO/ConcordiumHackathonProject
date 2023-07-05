@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css?family=IBM Plex Sans Condensed');
+
+h3 {
+    font-family: 'Anton', Arial;
+}
+
+h2,h3,h4,p{
+    font-family: 'Anton', Verdana;
+    color: #3a3a3a !important;
+}
+
+
+.scrollable {
+    overflow: scroll;
+}
+
+.box-height {
+    height: 500px;
+}
+
+.line-holder {
+    height: 1500px;
+    overflow: auto;
+}
+
+.line {
+    position: absolute;
+    height: 1200px;
+    border-top:#3a3a3a;
+    border-style: solid;
+}
+
+.top-border {
+    border-top: solid;
+    border-radius: 3px;
+}
+
+.circle {
+    border-radius: 100px;
+    background-color: #3a3a3a;
+    height: 50px;
+    width: 50px;
+    position: relative;
+}
+
+.timeline-box {
+    position: relative;
+    border-color: #3a3a3a;
+    border-top: solid;
+}
+
+.seperator-color {
+    background-color: #e0e0e0;
+}
+
+.line-width {
+    width: 5px !important;
+}
+
+.line-z-index {
+    z-index: 2;
+    position: absolute;
+}
+
+.road-box {
+    z-index: 3;
+}
+
+.black {
+    background-color: #3a3a3a;
+}
+
+.trans-white {
+    background-color: #ffffff9f;
+}

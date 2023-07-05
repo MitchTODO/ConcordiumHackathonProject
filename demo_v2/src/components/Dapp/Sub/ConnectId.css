@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css?family=IBM Plex Sans Condensed');
+
+
+html {
+    background-color: #212529;
+    
+}
+
+h2,h3,p,button{
+    color:white !important;
+}
+
+.dark-text {
+    color:#212529 !important;
+}
+
+.light-text {
+    color:#dfdfdf !important;
+}
+
+.text-small {
+    font-size:12px;
+}
+
+.width-text {
+    width:600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.margin-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+

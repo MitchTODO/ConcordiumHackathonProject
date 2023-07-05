@@ -1,0 +1,31 @@
+
+.black-text {
+    color:rgb(0, 0, 0) !important;
+}
+
+.big-padding {
+    padding:25px;
+}
+
+.will-spacing {
+    text-indent: 100px;
+
+    line-height: 1.8;
+    word-spacing: 5px;
+}
+
+.left-padding {
+    padding-left: 150px;
+}
+
+.right-padding {
+    padding-right:150px;
+}
+
+.fix-size {
+    width: 230px;
+}
+
+.text-small {
+    font-size:12px;
+}

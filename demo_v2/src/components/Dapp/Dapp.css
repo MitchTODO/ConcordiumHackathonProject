@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css?family=IBM Plex Sans Condensed');
+
+
+html {
+    background-color: #212529;
+    
+}
+
+h2,h3,h5{
+    color:white !important;
+}
+
+.margin-right {
+    margin-right: 10px;
+
+}
+
+.topAddress {
+    max-width: 150px;
+}
+
+.font-style {
+    font-weight: 400;
+}
+
+.invisibility {
+    visibility: hidden;
+}
+
+.margin-top {
+    margin-top: 50px;
+}
+
+.margin-bottom {
+    margin-bottom: 10px;
+}
+
+.will-margin {
+    margin-left: 50px;
+    margin-right: 50px;
+
+}
