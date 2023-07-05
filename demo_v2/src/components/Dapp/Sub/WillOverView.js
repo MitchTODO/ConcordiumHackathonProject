@@ -48,6 +48,8 @@ function WillOverView(props) {
                 getWill(accountAddress,willCount)
                 if (willCount == 0){
                     setTextState("No exisiting wills...")
+                    setLoading(false)
+                    setSubState(1)
                 }else{
                     setTextState(`Fetching ${willCount} exisiting wills`)
                 }
