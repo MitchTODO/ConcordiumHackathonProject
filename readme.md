@@ -112,8 +112,6 @@ The discovery of a E-Will relies heavily on a feature only known to the Concordi
 
 [Quick start & Dapp Walk Through video](https://youtu.be/mwk5ypTN6h8)
 
-[Only Dapp Walk Through video](https://youtu.be/yxFT_i2EiZw?t=469)
-
 ### 1. Download & install
 
 Open your terminal and git clone the repo.
