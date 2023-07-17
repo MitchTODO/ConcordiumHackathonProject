@@ -15,7 +15,7 @@ use concordium_std::*;
 /// Contract Arch
 /// NFTID -> Address:Will OBJECT -> WillState
 
-/// Baseurl
+/// Base meta url using IPFS
 const TOKEN_METADATA_BASE_URL:&str = "https://cloudflare-ipfs.com/ipfs/";
 
 /// List of supported standards by this contract address.
@@ -67,13 +67,16 @@ enum WillModType {
 }
 
 
-
+// will mod struct
+// mod event 
+// mod timestamp
 #[derive(Serialize, SchemaType, Clone)]
 pub struct WillMod {
     mod_type: WillModType,
     timestamp: Timestamp
 }
 
+// mod implentation
 impl WillMod {
     fn new(mod_type:WillModType,time:Timestamp) -> Self {
         Self {
@@ -83,13 +86,12 @@ impl WillMod {
     }
 }
 
-
 // Will file state for esealing
 #[derive(Serial, Deserial, Clone, SchemaType)]
 struct FileState {
     // The timestamp when this file hash was registered.
     timestamp: Option<Timestamp>,
-    // Witnesses (sender_account) that witness file notary.
+    // Witnesses that witness file notary. Check readme for info
     witness: Vec<AccountAddress>,
 }
 
@@ -107,7 +109,7 @@ impl FileState {
 #[derive(Serialize, SchemaType, Clone)]
 pub struct Will {
     will_file:String,
-    will_hash:HashSha2256,      // TODO check when notrizing if hashes match same will file shouldn't be notrarized twice
+    will_hash:HashSha2256,  
     notary:AccountAddress,
     notarized: bool,
     e_seal:FileState,
@@ -120,9 +122,9 @@ pub struct Will {
 #[derive(Serial, DeserialWithState, Deletable, StateClone)]
 #[concordium(state_parameter = "S")]
 struct WillState<S> {
-    active_will: Option<Will>,      // active will is the lastest will to be notarized
-    will_index: u32,                 // amount of will user has created ie (owned_tokens)
-    wills: StateMap<u32,Will,S>,     // mapping of wills to u8 NOTE could us will hash 
+    active_will: Option<u32>,       // token_id of active will
+    will_index: u32,                // amount of will user has created ie (owned_tokens)
+    wills: StateMap<u32,Will,S>,    // mapping of wills to u8 NOTE could us will hash 
     operators: StateSet<Address,S>, // addresses allowed to modifiy wills? notaized is removed
 }
 
@@ -186,11 +188,13 @@ enum CustomContractError {
     // Will errors
     IncorrectHash,
     NoWill,
+    NoActiveWill,
     
     // Notary errors
     NotaryCantBeTestator,
     WillAlreadyNotarized,
     IncorrectNotary,
+    NotNotarized,
 
     InvokeContractError,
     InvalidTokenId,
@@ -234,7 +238,8 @@ impl<S: HasStateApi> State<S> {
         }
     }
 
-    // mints new will struct under 
+    /// mints new will struct under sender account address as owner
+    /// returns token_id
     fn mint(
         &mut self,
         owner: &AccountAddress,
@@ -249,24 +254,25 @@ impl<S: HasStateApi> State<S> {
             .entry(will_index)
             .or_insert(will);
 
+            // increment sender will count
             owner_state.will_index += 1;
+            // return new token_id 
             Ok(concordium_cis2::TokenIdU32(owner_state.will_index))
         }
 
-    // updates owner active will via notary
+    /// updates owner active will via notary
     fn update_active_will(
         &mut self,
         owner:&AccountAddress,
         index:&u32,
-        will:Will,
+        will:&Will
     ) 
     {
         self.state.entry(*owner).and_modify(|will_state| {
-            will_state.active_will = Some(will.clone());
+            will_state.active_will = Some(*index);
             will_state.wills.entry(*index).and_modify(|old_will| {
                 *old_will = will.clone();
             });
-
         });
     }
 
@@ -308,32 +314,14 @@ impl<S: HasStateApi> State<S> {
         .unwrap_or(0))
     }
     
-    // Revokes active will from user
+    // Revokes active will
     fn revoke(
         &mut self,
-        token_id:&u32,
         owner:&AccountAddress,
     )
     {
         self.state.entry(*owner).and_modify(|will_state| {
             will_state.active_will = None;
-        });
-    }
-    
-    // Revives a existing or newly notarized will to active will 
-    fn revive(
-        &mut self,
-        owner:&AccountAddress,
-        token_id:&u32,
-        will:Will,
-    ) 
-    {
-        self.state.entry(*owner).and_modify(|will_state| {
-            will_state.active_will = Some(will.clone());
-            will_state.wills.entry(*token_id).and_modify(|old_will| {
-                *old_will = will.clone();
-            });
-
         });
     }
     
@@ -373,6 +361,26 @@ impl<S: HasStateApi> State<S> {
         owner:&AccountAddress,
     ) -> Option<Will>
     {
+
+        let active_index = self
+        .state
+        .get(&owner)
+        .map(|will_state| will_state.active_will.clone())
+        .unwrap_or(None);
+
+        let token_id = match active_index {
+            None => return None,
+            Some(u32) => active_index.unwrap(),
+        };
+
+        return self.get_will(&owner,&token_id).unwrap();
+    }
+
+    fn get_active_will_id(
+        &self,
+        owner:&AccountAddress,
+    ) -> Option<u32>
+    {
         self
         .state
         .get(&owner)
@@ -406,6 +414,24 @@ impl<S: HasStateApi> State<S> {
             .unwrap_or(0)
         }
 
+    /********** CI2 Standard *************/
+    /// Check if state contains any implementors for a given standard.
+    fn have_implementors(&self, std_id: &StandardIdentifierOwned) -> SupportResult {
+        if let Some(addresses) = self.implementors.get(std_id) {
+            SupportResult::SupportBy(addresses.to_vec())
+        } else {
+            SupportResult::NoSupport
+        }
+    }
+
+    /// Set implementors for a given standard.
+    fn set_implementors(
+        &mut self,
+        std_id: StandardIdentifierOwned,
+        implementors: Vec<ContractAddress>,
+    ) {
+        self.implementors.insert(std_id, implementors);
+    }
 }
 
 /*********************** Contract Events  ***********************/
@@ -435,6 +461,8 @@ pub struct NotarizationEvent {
 /********************** Contract Functions  **********************/
 
 // Init creates a new smart contract instance.
+// TODO check if CIS2 event need to emitted 
+// event = "Cis2Event<ContractTokenId, ContractTokenAmount>")
 #[init(contract = "ewills2")]
 fn init<S: HasStateApi>(
     _ctx: &impl HasInitContext,
@@ -638,10 +666,11 @@ fn notarize<S: HasStateApi>(
         timestamp : Some(timestamp),
         witness : params.witness,
     };
-    
-    // update `will` struct 
-    host.state_mut().update_active_will(&params.testator, &params.token_id, c_will);
 
+    // update `will` struct 
+    host.state_mut().update_active_will(&params.testator, &params.token_id,&c_will);
+
+    // add will mod after update active will 
     let will_mod = WillMod::new(WillModType::Notarized,timestamp);
     host.state_mut().modifiy(&params.token_id,&params.testator,will_mod);
 
@@ -654,7 +683,6 @@ fn notarize<S: HasStateApi>(
         witness: sender_account,
         timestamp:timestamp,
     }))?;
-    
     Ok(())
 }
 
@@ -681,22 +709,85 @@ fn get_will<S: HasStateApi>(
 #[receive(
     contract = "ewills2",
     name = "revoke_active_will",
-    parameter = "WillParams",
-    return_value = "bool"
+    error = "CustomContractError",
+    mutable,
+    return_value = "bool",
 )]
-fn revoke_active_will() {
+fn revoke_active_will<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &mut impl HasHost<State<S>, StateApiType = S>,
+) -> Result<bool, CustomContractError> {
 
+    // match sender to address account
+    let sender_account = match ctx.sender() {
+        Address::Contract(_) => bail!(CustomContractError::OnlyAccount),
+        Address::Account(account_address) => account_address,
+    };
+    let token_id_w = host.state().get_active_will_id(&sender_account);
+    let token_id = match token_id_w {
+        None => bail!(CustomContractError::NoActiveWill),
+        Some(u32) => token_id_w.unwrap(), 
+    };
+
+    host.state_mut().revoke(&sender_account);
+
+    // get block time stamp
+    let timestamp = ctx.metadata().slot_time();
+
+    // add will mod after update active will 
+    let will_mod = WillMod::new(WillModType::Revoke,timestamp);
+    host.state_mut().modifiy(&token_id,&sender_account,will_mod);
+
+    Ok(true)
 }
 
 
 #[receive(
     contract = "ewills2",
-    name = "revoke_active_will",
+    name = "revive_active_will",
     parameter = "WillParams",
-    return_value = "bool"
+    error = "CustomContractError",
+    mutable,
+    return_value = "bool",
 )]
-fn revive_active_will() {
+fn revive_active_will<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &mut impl HasHost<State<S>, StateApiType = S>,
+) -> Result<bool, CustomContractError>
+ {
+    // get input parameters
+    let param: WillParams = ctx.parameter_cursor().get()?;
 
+    // match sender to address account / only accounts.
+    let sender_account = match ctx.sender() {
+        Address::Contract(_) => bail!(CustomContractError::OnlyAccount),
+        Address::Account(account_address) => account_address,
+    };
+
+    // get will to revive
+    let will = host.state().get_will(&sender_account,&param.token_id).unwrap();
+
+    // check if will is not option
+    let will_op = match will {
+        None => bail!(CustomContractError::NoWill),
+        Some(will) => will, 
+    };
+
+    // check if will has be notarized 
+    ensure_eq!(will_op.notarized, true, CustomContractError::NotNotarized);
+    
+    // revive prior notarized will
+    //host.state_mut().revive(&sender_account,&param.token_id, &will_op);
+    host.state_mut().update_active_will(&sender_account, &param.token_id, &will_op);
+
+    // get block time stamp
+    let timestamp = ctx.metadata().slot_time();
+
+    // add will mod after update active will 
+    let will_mod = WillMod::new(WillModType::Revived,timestamp);
+    host.state_mut().modifiy(&param.token_id,&sender_account,will_mod);
+
+    Ok(true)
 }
 
 
@@ -704,7 +795,7 @@ fn revive_active_will() {
     contract = "ewills2",
     name = "will_exists",
     parameter = "WillParams",
-    return_value = "bool"
+    return_value = "bool",
 )]
 fn will_exists<S: HasStateApi>(
     ctx: &impl HasReceiveContext,
@@ -790,7 +881,6 @@ fn contract_balance_of<S: HasStateApi>(
         }else{
             response.push(concordium_cis2::TokenAmountU8(0));
         }
-        
     }
     let result = ContractBalanceOfQueryResponse::from(response);
     Ok(result)
@@ -798,23 +888,10 @@ fn contract_balance_of<S: HasStateApi>(
 
 
 
-/*
+
 type TransferParameter = TransferParams<ContractTokenId, ContractTokenAmount>;
 
-/// Execute a list of token transfers, in the order of the list.
-///
-/// Logs a `Transfer` event and invokes a receive hook function for every
-/// transfer in the list.
-///
-/// It rejects if:
-/// - It fails to parse the parameter.
-/// - Any of the transfers fail to be executed, which could be if:
-///     - The `token_id` does not exist.
-///     - The sender is not the owner of the token, or an operator for this
-///       specific `token_id` and `from` address.
-///     - The token is not owned by the `from`.
-/// - Fails to log event.
-/// - Any of the receive hook function calls rejects.
+/// eWill NFT's aren't transferable 
 #[receive(
     contract = "ewills2",
     name = "transfer",
@@ -838,6 +915,7 @@ fn contract_transfer<S: HasStateApi>(
 /// It rejects if:
 /// - It fails to parse the parameter.
 /// - Fails to log event.
+/// TODO add operators
 #[receive(
     contract = "ewills2",
     name = "updateOperator",
@@ -854,7 +932,82 @@ fn contract_update_operator<S: HasStateApi>(
 
     Ok(())
 }
-*/
+
+#[receive(
+    contract = "ewills2",
+    name = "operatorOf",
+    parameter = "OperatorOfQueryParams",
+    return_value = "OperatorOfQueryResponse",
+    error = "ContractError"
+)]
+fn contract_operator_of<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ContractResult<OperatorOfQueryResponse> {
+    // Parse the parameter.
+    let params: OperatorOfQueryParams = ctx.parameter_cursor().get()?;
+    // Build the response.
+    let mut response = Vec::with_capacity(params.queries.len());
+    for query in params.queries {
+        // Query the state for address being an operator of owner.
+        //let is_operator = host.state().is_operator(&query.address, &query.owner);
+        response.push(true);
+    }
+    let result = OperatorOfQueryResponse::from(response);
+    Ok(result)
+}
+
+/// Get the supported standards or addresses for a implementation given list of
+/// standard identifiers.
+///
+/// It rejects if:
+/// - It fails to parse the parameter.
+#[receive(
+    contract = "ewills2",
+    name = "supports",
+    parameter = "SupportsQueryParams",
+    return_value = "SupportsQueryResponse",
+    error = "ContractError"
+)]
+fn contract_supports<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &impl HasHost<State<S>, StateApiType = S>,
+) -> ContractResult<SupportsQueryResponse> {
+    // Parse the parameter.
+    let params: SupportsQueryParams = ctx.parameter_cursor().get()?;
+
+    // Build the response.
+    let mut response = Vec::with_capacity(params.queries.len());
+    for std_id in params.queries {
+        if SUPPORTS_STANDARDS.contains(&std_id.as_standard_identifier()) {
+            response.push(SupportResult::Support);
+        } else {
+            response.push(host.state().have_implementors(&std_id));
+        }
+    }
+    let result = SupportsQueryResponse::from(response);
+    Ok(result)
+}
+
+#[receive(
+    contract = "ewills2",
+    name = "setImplementors",
+    parameter = "SetImplementorsParams",
+    error = "ContractError",
+    mutable
+)]
+fn contract_set_implementor<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &mut impl HasHost<State<S>, StateApiType = S>,
+) -> ContractResult<()> {
+    // Authorize the sender.
+    ensure!(ctx.sender().matches_account(&ctx.owner()), ContractError::Unauthorized);
+    // Parse the parameter.
+    let params: SetImplementorsParams = ctx.parameter_cursor().get()?;
+    // Update the implementors in the state
+    host.state_mut().set_implementors(params.id, params.implementors);
+    Ok(())
+}
 
 
 /********************** Contract Testing  **********************/
@@ -1089,7 +1242,7 @@ mod tests {
         // mint will
         let _ = contract_mint(&ctx,&mut host,&mut logger);
 
-        // notary parameters 
+        // setup witness vec parameters 
         let mut witness = Vec::new();
         witness.push(WITNESS1);
         witness.push(WITNESS2);
@@ -1153,10 +1306,11 @@ mod tests {
         claim_eq!(a_will.clone().unwrap().will_hash,WILL_1_HASH, "Will hash should match");
         claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
         claim_eq!(a_will.clone().unwrap().notarized,true, "Will should be be notarized");
+        claim_eq!(a_will.clone().unwrap().mod_history.len(),2,"Active Will mod history is incorrect");
         // Mint + Notary = 2
         claim_eq!(will.clone().unwrap().mod_history.len(),2,"Will mod history is incorrect");
     }
-
+    /*
     #[concrodium_test]
     fn revoke_active_will() {
 
@@ -1167,14 +1321,17 @@ mod tests {
     fn revive_active_will() {
 
     }
-
+    */
     
-    /*
     #[concordium_test]
     fn testing_activation_change() {
         // set up test case
         let mut ctx = TestReceiveContext::empty();
         ctx.set_sender(Address::Account(TESTATOR));
+
+        // set timestamp 
+        const TIME: u64 = 1;
+        ctx.set_metadata_slot_time(Timestamp::from_timestamp_millis(TIME));
 
         // create state
         let mut logger = TestLogger::init();
@@ -1183,51 +1340,51 @@ mod tests {
         let mut host = TestHost::new(state,state_builder);
 
         // minting parameters
-        let will_url_one:String = "will 1".to_string();
-        let will_url_two:String = "will 2".to_string();
+        let will_url_one:String = "will-1".to_string();
+        let will_url_two:String = "will-2".to_string();
 
-        let will_params_one = WillParam {
+        let will_params_one = MintParams {
             will_file: will_url_one.clone(),
             will_hash: WILL_1_HASH,
             notary: NOTARY,
         };
 
-        let will_params_two = WillParam {
+        let will_params_two = MintParams {
             will_file: will_url_two.clone(),
             will_hash: WILL_2_HASH,
             notary: NOTARY,
         };
+        
+        // setup witness vec for notary 
+        let mut witness = Vec::new();
+        witness.push(WITNESS1);
+        witness.push(WITNESS2);
 
         // set parameters and mint first will
         let w_params_one = to_bytes(&will_params_one);
         ctx.set_parameter(&w_params_one);
-        let _ = mint(&ctx,&mut host,&mut logger);
+        let _ = contract_mint(&ctx,&mut host,&mut logger);
 
 
         // set parameters and mint second will 
         let w_params_two = to_bytes(&will_params_two);
         ctx.set_parameter(&w_params_two);
-        let _ = mint(&ctx,&mut host,&mut logger);
-
-    
-        // notary parameters 
-        const TIME: u64 = 1;
-        ctx.set_metadata_slot_time(Timestamp::from_timestamp_millis(TIME));
+        let _ = contract_mint(&ctx,&mut host,&mut logger);
 
         // notary parameters for first will
         let notary_params_one = NotaryParams {
             will_hash: WILL_1_HASH,
-            will_id: 0,
+            token_id: 0,
             testator:TESTATOR,
-            witness: WITNESS,
+            witness: witness.clone(),
         };
 
         // notary parameters for second will
         let notary_params_two = NotaryParams {
             will_hash: WILL_2_HASH,
-            will_id: 1, // set will id
+            token_id: 1, // set will id
             testator:TESTATOR,
-            witness: WITNESS,
+            witness: witness.clone(),
         };
 
         // set sender as notary
@@ -1242,8 +1399,8 @@ mod tests {
         // check testators active will 
   
         //let params = to_bytes(&TESTATOR);
-        let check_active_params_object_1 = WillIdParams {
-            will_id: 0,
+        let check_active_params_object_1 = WillParams {
+            token_id: 0,
             owner: TESTATOR,
         };
         let cap1 = to_bytes(&check_active_params_object_1);
@@ -1253,10 +1410,11 @@ mod tests {
         claim!(active_will_one.is_ok(),"Could not get active will");
         let a_will = active_will_one.unwrap();
         claim!(a_will.is_some(), "Active will is none");
-        claim_eq!(a_will.clone().unwrap().will_file, will_url_two, "Will url should match");
+        claim_eq!(a_will.clone().unwrap().will_file,"https://cloudflare-ipfs.com/ipfs/will-2", "Will url should match");
         claim_eq!(a_will.clone().unwrap().will_hash,WILL_2_HASH, "Will hash should match");
         claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
-        claim_eq!(a_will.clone().unwrap().is_notarized,true, "Will should be be notarized");
+        claim_eq!(a_will.clone().unwrap().notarized,true, "Will should be be notarized");
+        claim_eq!(a_will.clone().unwrap().mod_history.len(),2,"Mod history is incorrect");
 
         
         // Notarize second will
@@ -1272,8 +1430,8 @@ mod tests {
         // Check results of active will
         ctx.set_sender(Address::Account(TESTATOR));
         
-        let check_active_params_object_2 = WillIdParams {
-            will_id: 0,
+        let check_active_params_object_2 = WillParams {
+            token_id: 0,
             owner: TESTATOR,
         };
 
@@ -1287,11 +1445,12 @@ mod tests {
 
         claim!(a_will.is_some(), "Active will is none");
         
-        claim_eq!(a_will.clone().unwrap().will_file, will_url_one, "Will url should match");
+        claim_eq!(a_will.clone().unwrap().will_file, "https://cloudflare-ipfs.com/ipfs/will-1", "Will url should match");
         claim_eq!(a_will.clone().unwrap().will_hash,WILL_1_HASH, "Will hash should match");
         claim_eq!(a_will.clone().unwrap().notary,NOTARY, "Will notary should match");
-        claim_eq!(a_will.clone().unwrap().is_notarized,true, "Will should be be notarized");
+        claim_eq!(a_will.clone().unwrap().notarized,true, "Will should be be notarized");
+        
     }
-    */
+    
 }
 
