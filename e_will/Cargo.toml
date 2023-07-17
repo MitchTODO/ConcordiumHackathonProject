@@ -3,18 +3,19 @@
 [package]
 name = "ewills"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 authors = [ "Mitchell Tucker <tucker.mitchelltucker.mitchell@gmail.com>" ]
-description = "ewills144"
+description = "ewills2"
 
 [features]
 default = ["std"]
-std = ["concordium-std/std"]
+std = ["concordium-std/std", "concordium-cis2/std"]
 wee_alloc = ["concordium-std/wee_alloc"]
 
 [dependencies]
-concordium-std = {version = "6.0", default-features = false}
+concordium-std = {version = "7.0", default-features = false}
+concordium-cis2 = {version = "4.0", default-features = false}
 
 [lib]
 crate-type=["cdylib", "rlib"]
