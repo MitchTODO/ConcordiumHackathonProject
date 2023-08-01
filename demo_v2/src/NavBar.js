@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import logo from './components/assets/logo.png';
+
 import { Router, useNavigate } from "react-router-dom";
 import './App.css';
 
@@ -19,22 +19,35 @@ function Navi(props) {
 
   return(
     <div>
-    <nav className="navbar primary-color shadow">
-        <img className=" p-2 navbar-brand m-2 " onClick={console.log("here")}  height={55} src={logo} />
-        <div className=" p-2 bd-highlight">
+    <nav className="navbar primary-color shadown roboto-text ">
+        <button type="button" onClick ={console.log("Twitter")} className="btn ">
+          <img className=" navbar-brand " onClick={console.log("here")}  height={55} src="E-WillsLOGO.png" />
+          <img className=" navbar-brand " onClick={console.log("here")}  height={55} src="E-WillsTEXT.JPG" />
+        </button>
+        
+        <div className="  bd-highlight ">
           <ul className="navbar-nav d-flex flex-row">
-          <li className="nav-item px-2">
-              <button type="button" onClick ={console.log("about")} className="btn m-2">About</button>
+          <li className="nav-item ">
+              <button type="button" onClick ={console.log("about")} className="btn m-2 text-dark roboto-text">About</button>
             </li>
-            <li className="nav-item px-2">
-              <button type="button" onClick ={console.log("htw")} className="btn m-2">How It Works</button>
+            <li className="nav-item ">
+              <button type="button" onClick ={console.log("htw")} className="btn m-2 text-dark roboto-text">How It Works</button>
             </li>
-            <li className="nav-item px-2">
-              <button type="button" onClick ={console.log("road map")} className="btn m-2">Road Map</button>
+            <li className="nav-item ">
+              <button type="button" onClick ={console.log("road map")} className="btn m-2 text-dark roboto-text">Road Map</button>
             </li>
-            <li className="nav-item px-2">
-              <button type="button" onClick ={toApp} className="btn btn-dark m-2">Launch App</button>
+            <li className="nav-item ">
+              <button type="button" onClick ={toApp} className="btn btn-primary blue-button m-2 roboto-text">Demo</button>
             </li>
+            <li className="nav-item ">
+              <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
+                <img onClick={console.log("here")}  height={20} src="twitterLogoBlack.svg"  />
+              </button>
+              <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
+                <img onClick={console.log("here")}  height={20} src="github-mark.png"  />
+              </button>
+            </li>
+
           </ul>
           </div>
       </nav>
@@ -43,32 +56,6 @@ function Navi(props) {
   )
 }
 
-
-/*
-class Navi extends React.Component {
-
-  constructor(props) {
-    super(props);
-      
-      this.connectAccount = this.connectAccount.bind(this)
-  }
-
-  // handle navi button clicks
-  async connectAccount() {
-    const navigate = useNavigate();
-    navigate("/app");
-
-    //console.log("Value");
-  }
-
-  render() {
-    return (
-
-
-    );
-  }
-}
-*/
 
 
 export default Navi;

@@ -1,5 +1,4 @@
 import React, {Component} from 'react';
-import logo from "../assets/logoLight.png";
 import './Dapp.css'
 import ConnectId from "./Sub/ConnectId";
 import WillOverView from './Sub/WillOverView';
@@ -80,7 +79,7 @@ class Dapp extends Component {
 
                 
                 <div className='d-flex justify-content-between margin-right'>
-                    <img className=" p-2 navbar-brand m-2 "  height={55} src={logo} />
+                    <img className=" p-2 navbar-brand m-2 "  height={55} src="logo.png" />
                     
                     <div className=" d-inline-block topAddress rounded-bottom bg-primary p-1 text-center">
                         <b>Identity Address</b>

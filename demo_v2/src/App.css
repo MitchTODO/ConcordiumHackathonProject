@@ -1,11 +1,9 @@
-@import url('https://fonts.googleapis.com/css?family=Josefin+Sans');
+
+  @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
 
 html {
   background-color: #ffffff
-}
-
-body {
-  font-family: 'Agdasima', ;
 }
 
 .App {
@@ -34,6 +32,11 @@ body {
   color:azure;
 }
 
+.roboto-text {
+  font-family: 'Roboto', sans-serif;
+  font-weight: bold !important;
+  letter-spacing: 0.2px;
+}
 
 .prev-background {
   color:aliceblue;

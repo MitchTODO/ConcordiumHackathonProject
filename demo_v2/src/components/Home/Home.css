@@ -9,6 +9,42 @@ h2,h3,h4,p{
     color: #3a3a3a !important;
 }
 
+.blue-text {
+    color: #21629e !important;
+}
+
+.bold {
+    font-weight: bolder;
+    font-size: 40px;
+    
+}
+
+.main-height {
+    min-height: 450px;
+}
+
+.auto-margin {
+    margin-top: auto;
+    margin-bottom: auto;
+    
+}
+
+.right-margin {
+    margin-right: 50px;
+}
+
+.right-text {
+    text-align: end;
+}
+
+.side-auto-margin {
+    margin-right: auto;
+    margin-left:auto;
+}
+
+.no-white {
+    white-space: break-spaces; 
+}
 
 .scrollable {
     overflow: scroll;
@@ -33,6 +69,14 @@ h2,h3,h4,p{
 .top-border {
     border-top: solid;
     border-radius: 3px;
+}
+
+.blue-button {
+    background-color: #21629e !important;
+}
+
+.light-blue-button {
+    background-color: rgb(22,174 ,255 )
 }
 
 .circle {
@@ -66,8 +110,8 @@ h2,h3,h4,p{
     z-index: 3;
 }
 
-.black {
-    background-color: #3a3a3a;
+.blueBack {
+    background-color: #21629e;
 }
 
 .trans-white {

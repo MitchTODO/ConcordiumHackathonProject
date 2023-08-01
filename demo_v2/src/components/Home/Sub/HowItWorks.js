@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { Router, useNavigate } from "react-router-dom";
 import "../Home.css"
+
 
 function HowItWorks(props) {
 
@@ -12,6 +14,12 @@ function HowItWorks(props) {
     },[
         
     ])
+
+    const navigate = useNavigate();
+
+    function toApp() {
+      navigate("/app")
+    }
 
     const Info = {
         Create: "Will and identiy creation",
@@ -41,23 +49,28 @@ function HowItWorks(props) {
     }
 
     return (
-        <div className=" d-flex text-right flex-column seperator-color ">
-            <div className=" d-flex justify-content-center m-5">
+        <div className=" d-flex flex-column seperator-color p-5 ">
+            <h3 className="m-3 text-dark bold right-text">
+                How It Works 
+              </h3>
+            <div className=" d-flex justify-content-center ">
                 <div className=" d-flex flex-column rounded justify-content-center w-75">
                     <h3>{info}</h3>
                 </div>
                 <div className="d-flex" >
                     <div className="vr"></div>
                 </div>
-                <div className="d-flex flex-column w-25 align-middle m-0 ">
-                    <h2 className="m-3 text-right "> How It Works </h2>
+                <div className="d-flex flex-column w-25 align-middle m-5 ">
               
-                    <button id = "1" onClick={willSteps} className={`m-5 btn ${id == "1" ? "btn-primary": "btn-dark"}`}>1. Create</button>
-                    <button id = "2" onClick={willSteps} className={`m-5 btn ${id == "2" ? "btn-primary": "btn-dark"}`}>2. Upload</button>
-                    <button id = "3" onClick={willSteps} className={`m-5 btn ${id == "3" ? "btn-primary": "btn-dark"}`}>3. Notarize</button>
-                    <button id = "4" onClick={willSteps} className={`m-5 btn ${id == "4" ? "btn-primary": "btn-dark"}`}>4. Discover</button>
+                    <button id = "1" onClick={willSteps} className={`btn ${id == "1" ? "btn-primary blue-button": "btn-dark"}`}>1. Create</button>
+                    <button id = "2" onClick={willSteps} className={`btn ${id == "2" ? "btn-primary blue-button": "btn-dark"}`}>2. Upload</button>
+                    <button id = "3" onClick={willSteps} className={`btn ${id == "3" ? "btn-primary blue-button": "btn-dark"}`}>3. Notarize</button>
+                    <button id = "4" onClick={willSteps} className={`btn ${id == "4" ? "btn-primary blue-button": "btn-dark"}`}>4. Discover</button>
                 </div>
+          
+                
             </div>
+            <button type="button" onClick ={toApp} className="btn btn-primary blue-button text-dark m-2 roboto-text">Try The Demo</button>
         </div>
     )
 }

@@ -44,6 +44,8 @@ function WillOverView(props) {
     const getWillCount = async (accountAddress) => {
         props.contractService.willCount(accountAddress,0)
             .then(willCount => {
+                console.log("Will count");
+                console.log(willCount);
                 setWillCount(willCount)
                 getWill(accountAddress,willCount)
                 if (willCount == 0){

@@ -111,7 +111,7 @@ function CreateWill(props) {
         if (willBuffer == null || willHash == "" || notary == "") {
             console.log("check inputs");
         }
-
+        console.log("mint will");
         // Upload will to ipfs
         // Use proof id's to encrypt the will 
         
@@ -145,8 +145,9 @@ function CreateWill(props) {
     }
 
     const updateInputValue = (evt) => {
-        console.log(evt);
-    }
+        const val = evt.target.value;   
+        setNotary(val);
+      }
   
     // props.scheduleNotary
     const viewSteps = () => {
@@ -213,7 +214,7 @@ function CreateWill(props) {
                         </div>
                     </div>
                 )
-            
+
         }
     }
 
