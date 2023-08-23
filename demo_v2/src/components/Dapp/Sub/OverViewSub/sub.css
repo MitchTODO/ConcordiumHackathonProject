@@ -1,0 +1,32 @@
+
+
+.file-view {
+    background-color: white;
+    border-radius: 10px;
+}
+
+.view-margin {
+    margin-top: 50px;
+}
+
+.header {
+    background-color: #d8d5d5;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+
+
+.files {
+    border-radius: inherit;
+    cursor: pointer;
+    min-height: 100px;
+    overflow: scroll;
+}
+
+p {
+    text-align: center;
+    margin: inherit;
+    font-weight: 100;
+}
+

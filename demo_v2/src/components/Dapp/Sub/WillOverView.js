@@ -3,26 +3,27 @@ import React, { useState, useEffect } from "react";
 import '../Dapp.css';
 import './ConnectId.css';
 
-import PreviousWills from "./PreviousWills";
-import ActiveWill from "./ActiveWill";
-import CreateWill from "../CreateWill";
-import Notarize from "./Notarize";
+import SideBar from "./SideBar";
+import OverView from "./OverView";
 
 
 function WillOverView(props) {
 
-    const [subState,setSubState] = useState(null);
-    const [textState,setTextState] = useState("Checking for existing wills...");
+    const [subState,setSubState] = useState(0);
+    const [textState,setTextState] = useState("Checking for existing documents...");
     const [loading,setLoading] = useState(false);
 
     const [willCount,setWillCount] = useState(null);
     const [wills,setWills] = useState([]);
     const [activeWill,setActiveWill] = useState(null);
 
+
     useEffect(() => {
+        // set default state and show progress
         setSubState(0)
         setLoading(true)
-        // fetch existing wills 
+        
+        // fetch existing documents 
         if (props.account != null) {
             getWillCount(props.account) 
         }
@@ -31,29 +32,19 @@ function WillOverView(props) {
         props.contractService
     ])
 
-    const createWillAction = () => {
-        setSubState(2)
-    }
 
-    const scheduleNotary = () => {
-        setSubState(1)
-        getWillCount(props.account)
-    }
-
-    // get user will count
+    
+    // Get user will count
     const getWillCount = async (accountAddress) => {
         props.contractService.willCount(accountAddress,0)
             .then(willCount => {
-                console.log("Will count");
-                console.log(willCount);
-                setWillCount(willCount)
                 getWill(accountAddress,willCount)
+
                 if (willCount == 0){
-                    setTextState("No exisiting wills...")
+                    //setTextState("No exisiting documents.")
                     setLoading(false)
-                    setSubState(1)
                 }else{
-                    setTextState(`Fetching ${willCount} exisiting wills`)
+                    //setTextState(`Fetching ${willCount} exisiting documents...`)
                 }
             })
             .catch((error) => {
@@ -62,6 +53,7 @@ function WillOverView(props) {
     }
 
 
+    // Get will 
     const getWill = async (accountAddress,amount) => {
         let willArray = [];
         for(let w = 0; w <= amount - 1; w++) {
@@ -70,12 +62,11 @@ function WillOverView(props) {
             .then(willObject => {
                 if (willObject.hasOwnProperty("Some")) {
                     willObject.Some[0].id = w;
-                   
                     willArray.push(willObject.Some[0])
                     if (w == amount - 1) {
+                        setWillCount(amount)
                         setLoading(false)
                         setWills(willArray)
-                        setSubState(1)
                         getActiveWill(accountAddress)
                     }
                 }
@@ -85,6 +76,7 @@ function WillOverView(props) {
             })
         }
     }
+
 
     const getActiveWill = async (accountAddress) => {
         props.contractService.activeWill(0,accountAddress)
@@ -97,63 +89,20 @@ function WillOverView(props) {
             console.log(error);
         })
     }
-
-    const viewSteps = () => {
-        switch(subState) {
-            case 0:
-                return(
-                    <div className="d-flex justify-content-center text-center">
-                        <div>
-                            <h5>{textState}</h5>
-                            <div className="spinner-border text-light" role="status">
-                                <span className="sr-only"></span>
-                            </div>
-                        </div>
-                    </div>
-                )
-            case 1:
-                return(
-                    <div className="mt-5">
-                        <PreviousWills
-                            createWillAction = {createWillAction}
-                            willCount = {willCount}
-                            contractServices = {props.contractService}
-                            wills = {wills}
-                        />
-                        <ActiveWill
-                            activeWill = {activeWill}
-                        />
-                    </div>
-                )
-            case 2:
-                return(
-                    <div className="mt-5">
-                        <CreateWill
-                            client = {props.client}
-                            scheduleNotary = {scheduleNotary}
-                            contractService = {props.contractService}
-                            account = {props.account}
-                        />
-                    </div>
-                )
-            case 3:
-                return(
-                    <div className="mt-5">
-                        <Notarize
-                            client = {props.client}
-                            contractService = {props.contractService}
-                            account = {props.account}
-                        />
-                    </div>
-                )
-        }
-    }
-
+    
     return (
-        <div>
-            {viewSteps()}
+        <div className="d-flex justify-content-around match_window">
+            <SideBar 
+                subState = {setSubState}
+            />
+            <OverView
+                loading = {loading}
+                subState = {subState}
+                willCount = {willCount}
+                wills = {wills}
+            />
         </div>
-       
+
     )
 
 }

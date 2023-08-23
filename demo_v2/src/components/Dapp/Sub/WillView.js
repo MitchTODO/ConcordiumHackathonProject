@@ -9,10 +9,8 @@ function WillView(props) {
 
     useEffect(() => {
         if (props.will != null) {
-            let willFile = "https://cloudflare-ipfs.com/ipfs/"+props.will.will_file
-            getWillFile(willFile,props.will)
+            getWillFile(props.will.will_file,props.will)
         }
-
     },[props.will])
 
     // Get will file from url

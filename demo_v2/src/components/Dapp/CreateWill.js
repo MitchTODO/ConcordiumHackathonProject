@@ -114,10 +114,23 @@ function CreateWill(props) {
         console.log("mint will");
         // Upload will to ipfs
         // Use proof id's to encrypt the will 
-        
-        //console.log(willBuffer);
+        // upload image to ipfs
         const result = await ipfs.add(willBuffer);
 
+        console.log(result.path);
+        
+        let nftMetaData = {
+            "name": "E-Will - Proof Of Ownership",
+            "unique": true,
+            "description": "This NFT collectable show proof of ownership of a eletronic will and testament (E-Will). ",
+            "thumbnail": { "url": "https://cloudflare-ipfs.com/ipfs/QmfP8x7vkSZPUfNGNk4wcjzKBpVAcABVcugnfmJgFrLXJz" },
+            "display": { "url": "https://cloudflare-ipfs.com/ipfs/QmeERoCjBi61LcJ11By8poArgzdQRxXChsGw3vjUtdCYgB" },
+        }
+        
+
+        const nft_url = await ipfs.add(JSON.stringify(nftMetaData))
+        
+        console.log(nft_url.path);
         // Write will to chain 
         props.contractService.mint(props.account,result.path,willHash,notary)
         .then(txHash => {

@@ -15,31 +15,31 @@ import {
 import contract from "./DeployedContract.json"
 
 // Contract variables
-// :5187
-//5176
-const contractIndex = 5514
-const name = "ewillsabc"
+const contractIndex = 5952
+const contractName = "ewills931"
 
 class ContractServices {
 
     constructor(client) {
-        this.client = client; 
-        console.log(contract.rawModuleSchema);
-        this.moduleReference = new ModuleReference('8998771bf7373def2c016cce72751955eb695b6ff88676b0ed753694787e43c6');
+        this.client = client;
+        this.moduleReference = new ModuleReference('b3df9734e0a3e1f99390020e5c67b8c3edf5bd4d9bc46eb86515b1529a0d0698');
     }
-    //b687b2a1587a1a160edb2f784ca950612be7be3021b0502c84e8bc1ff0a71675
 
     willCount(sender,will_id) {
         // set invoker account address
         let invoker = new AccountAddress(sender);
+
         const client = this.client;
         const wcPomise = new Promise(function(resolve,reject) {
+
             const param = serializeUpdateContractParameters (
-                'ewillsabc',
+                contractName,
                 'will_count',
                 {
-                    token_id:will_id,
-                    owner:invoker,
+                    token_id:"00000000",
+                    owner: {
+                        Account: [sender],
+                    },
                 },
                 toBuffer(contract.rawModuleSchema, 'base64')
             );
@@ -49,7 +49,7 @@ class ContractServices {
             {
                 invoker: invoker, // set sender 
                 contract:{index: BigInt(contractIndex), subindex: BigInt(0) },
-                method:'ewillsabc.will_count',
+                method:contractName+'.will_count',
                 parameter:param,
             },
             ).then((viewResult) => {
@@ -57,7 +57,7 @@ class ContractServices {
                 let returnValue = deserializeReceiveReturnValue(
                     toBuffer(viewResult.returnValue,"hex"),
                     toBuffer(contract.rawModuleSchema,'base64'),
-                    "ewillsabc",
+                    contractName,
                     "will_count",
                     SchemaVersion.V2
                 )
@@ -67,7 +67,7 @@ class ContractServices {
     
             }).catch((error) => {
                 reject(error);
-                //console.log(error)
+                console.log(error)
                 //alert(error)
             });
         });
@@ -79,11 +79,13 @@ class ContractServices {
         let invoker = new AccountAddress(sender);
 
         const param = serializeUpdateContractParameters (
-            'ewillsabc',
+            contractName,
             'will_exists',
             {
-                will_id:will_id,
-                owner:invoker,
+                token_id:will_id,
+                owner:{
+                    Account: [sender],
+                },
             },
             toBuffer(contract.rawModuleSchema, 'base64')
         );
@@ -93,7 +95,7 @@ class ContractServices {
         {
             invoker: invoker, // set sender 
             contract:{index: BigInt(contractIndex), subindex: BigInt(0) },
-            method:'ewillsabc.will_exists',
+            method:contractName+'.will_exists',
             parameter:param,
         },
         ).then((viewResult) => {
@@ -101,11 +103,11 @@ class ContractServices {
             let returnValue = deserializeReceiveReturnValue(
                 toBuffer(viewResult.returnValue,"hex"),
                 toBuffer(contract.rawModuleSchema,'base64'),
-                "ewillsabc",
+                contractName,
                 "will_exists",
                 SchemaVersion.V2
             )
-            console.log(returnValue);
+            //console.log(returnValue);
 
         }).catch((error) => {
             console.log(error)
@@ -113,17 +115,19 @@ class ContractServices {
         });
     }
 
-    activeWill(will_id,invokerAddress) {
-        let invoker = new AccountAddress(invokerAddress);
+    activeWill(will_id,sender) {
+        let invoker = new AccountAddress(sender);
         const client = this.client;
 
         const wcPomise = new Promise(function(resolve,reject) {
             const param = serializeUpdateContractParameters(
-                'ewillsabc',
+                contractName,
                 'active_will',
                 {
-                    will_id:will_id,
-                    owner:invoker,
+                    token_id:will_id,
+                    owner:{
+                        Account: [sender],
+                    },
                 },
                 toBuffer(contract.rawModuleSchema, 'base64')
             );
@@ -133,13 +137,13 @@ class ContractServices {
             {
                 invoker: invoker,
                 contract:{index: BigInt(contractIndex), subindex: BigInt(0) },
-                method:'ewillsabc.active_will',
+                method:contractName+'.active_will',
                 parameter:param,
             }).then((viewResult) => {
                 let returnValue = deserializeReceiveReturnValue(
                     toBuffer(viewResult.returnValue,"hex"),
                     toBuffer(contract.rawModuleSchema,'base64'),
-                    "ewillsabc",
+                    contractName,
                     "active_will",
                     SchemaVersion.V2
                 )
@@ -159,13 +163,13 @@ class ContractServices {
         {
             invoker: invoker,
             contract:{index: BigInt(contractIndex), subindex: BigInt(0) },
-            method:'ewillsabc.is_contract',
+            method:contractName+'.is_contract',
             
         }).then((viewResult) => {
             let returnValue = deserializeReceiveReturnValue(
                 toBuffer(viewResult.returnValue,"hex"),
                 toBuffer(contract.rawModuleSchema,'base64'),
-                "ewillsabc",
+                contractName,
                 "is_contract",
                 SchemaVersion.V2
             )
@@ -180,11 +184,13 @@ class ContractServices {
 
         const wcPomise = new Promise(function(resolve,reject) {
             const param = serializeUpdateContractParameters(
-                'ewillsabc',
+                contractName,
                 'get_will',
                 {
-                    will_id:will_id,
-                    owner:testator,
+                    token_id:"00000000",
+                    owner:{
+                        Account: [testator],
+                    },
                 },
                 toBuffer(contract.rawModuleSchema, 'base64')
             );
@@ -194,13 +200,14 @@ class ContractServices {
             {
                 invoker: invoker,
                 contract:{index: BigInt(contractIndex), subindex: BigInt(0) },
-                method:'ewillsabc.get_will',
+                method:contractName+'.get_will',
                 parameter:param,
             }).then((viewResult) => {
+                
                 let returnValue = deserializeReceiveReturnValue(
                     toBuffer(viewResult.returnValue,"hex"),
                     toBuffer(contract.rawModuleSchema,'base64'),
-                    "ewillsabc",
+                    contractName,
                     "get_will",
                     SchemaVersion.V2
                 )
@@ -212,15 +219,23 @@ class ContractServices {
         return wcPomise
     }
 
+    getWillMeta(tokens) {
+        const params = serializeUpdateContractParameters(
+            
+        )
+    }
+
     isWillNotarized(sender,will_id,testatorAddress) {
         let invokerAddress = new concordiumSDK.AccountAddress(sender);
         let ownerAddress = new concordiumSDK.AccountAddress(testatorAddress);
         const param = serializeUpdateContractParameters(
-            'ewillsabc',
+            contractName,
             'isNotarized',
             {
-                will_id:will_id,
-                owner:ownerAddress,
+                token_id:will_id,
+                owner:{
+                    Account: [ownerAddress],
+                },
             },
             toBuffer(this.contract.rawModuleSchema, 'base64')
         );
@@ -230,13 +245,13 @@ class ContractServices {
         {
             invoker: invokerAddress,
             contract:{index: BigInt(this.contractIndex), subindex: BigInt(0) },
-            method:'ewillsabc.isNotarized',
+            method:contractName+'.isNotarized',
             parameters:param,
         }).then((viewResult) => {
             let returnValue = concordiumSDK.deserializeReceiveReturnValue(
                 concordiumSDK.toBuffer(viewResult.returnValue,"hex"),
                 concordiumSDK.toBuffer(this.contract.rawModuleSchema,'base64'),
-                "ewillsabc",
+                contractName,
                 "isNotarized",
                 concordiumSDK.SchemaVersion.V2
             )
@@ -259,7 +274,7 @@ class ContractServices {
                 {
                     amount: new CcdAmount(0n),
                     contractAddress:{index: BigInt(contractIndex), subindex: BigInt(0) },
-                    receiveName:"ewillsabc.notarize",
+                    receiveName:contractName+".notarize",
                     maxContractExecutionEnergy: 3000n
 
                 },
@@ -290,14 +305,16 @@ class ContractServices {
                 {
                     amount: new CcdAmount(0n),
                     contractAddress:{index: BigInt(contractIndex), subindex: BigInt(0) },
-                    receiveName:"ewillsabc.mint",
+                    receiveName:contractName+".mint",
                     maxContractExecutionEnergy: 3000n
                 },
                 // Pass input parameters 
                 {
                     will_hash,
                     will_file,
-                    notary,
+                    notary: {
+                        Account: [notary],
+                    },
                 },
                 contract.rawModuleSchema
             ).then(txHash => {

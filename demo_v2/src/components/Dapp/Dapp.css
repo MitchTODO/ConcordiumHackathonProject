@@ -2,11 +2,11 @@
 
 
 html {
-    background-color: #212529;
+    background-color: #b2c2d1;
     
 }
 
-h2,h3,h5{
+h2,h3{
     color:white !important;
 }
 
@@ -38,5 +38,12 @@ h2,h3,h5{
 .will-margin {
     margin-left: 50px;
     margin-right: 50px;
+}
 
+.main {
+    background-color: #b2c2d1;
+}
+
+.side-bar-color {
+    background-color: #e2e8ee;
 }

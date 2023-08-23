@@ -22,7 +22,7 @@ function Navi(props) {
     <nav className="navbar primary-color shadown roboto-text ">
         <button type="button" onClick ={console.log("Twitter")} className="btn ">
           <img className=" navbar-brand " onClick={console.log("here")}  height={55} src="E-WillsLOGO.png" />
-          <img className=" navbar-brand " onClick={console.log("here")}  height={55} src="E-WillsTEXT.JPG" />
+          <img className=" navbar-brand " onClick={console.log("here")}  height={35} src="E-WillsDTEXT.png" />
         </button>
         
         <div className="  bd-highlight ">
@@ -38,14 +38,6 @@ function Navi(props) {
             </li>
             <li className="nav-item ">
               <button type="button" onClick ={toApp} className="btn btn-primary blue-button m-2 roboto-text">Demo</button>
-            </li>
-            <li className="nav-item ">
-              <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
-                <img onClick={console.log("here")}  height={20} src="twitterLogoBlack.svg"  />
-              </button>
-              <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
-                <img onClick={console.log("here")}  height={20} src="github-mark.png"  />
-              </button>
             </li>
 
           </ul>

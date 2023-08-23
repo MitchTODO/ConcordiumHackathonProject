@@ -1,0 +1,11 @@
+.file {
+    height: 50px;
+    width: 100%;
+
+}
+
+.file:hover {
+    background-color: rgb(180, 180, 180);
+    border-radius: inherit;
+
+}

@@ -24,17 +24,13 @@ function Footer(props) {
                 </div>
 
                 <ul className="nav col-md-4 justify-content-end list-unstyled d-flex">
-                    <li className="ms-3">
-                        <a className="text-muted" href="#">
-                        </a>
-                    </li>
-                    <li className="ms-3">
-                        <a className="text-muted" href="#">
-                        </a>
-                    </li>
-                    <li className="ms-3">
-                        <a className="text-muted" href="#">
-                        </a>
+                    <li className="nav-item ">
+                        <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
+                            <img onClick={console.log("here")}  height={20} src="twitterLogoBlack.svg"  />
+                        </button>
+                        <button type="button" onClick ={console.log("Twitter")} className="btn m-2">
+                            <img onClick={console.log("here")}  height={20} src="github-mark.png"  />
+                        </button>
                     </li>
                 </ul>
             </footer>
