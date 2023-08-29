@@ -27,15 +27,6 @@ E-Wills is the next generation of Will notarization, verification & discovery po
 
 ---
 
-## About 
-
-This project is part of the Building The Future Of ID hackathon sponsored by Concordium Blockchain. With the goal of creating the next generation of use cases that have ID, privacy, and accountability at their core.
-
-## Concordium Wallet
-
-    34Aj12Gg6xgzrVRE6jLzcUD8T8FmHVygDeT4oDDZPBSpNmPjj4
-
-
 ## Requirements
 
 ***Note: check out branches task 1 | 2 for more details on setup requirements, also recommended watch Concordium's in-depth how to.***
